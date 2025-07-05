@@ -3,10 +3,10 @@ name: Build & Push Docker Image
 on:
   push:
     branches:
-      - main # Ganti dengan nama cabang utama kamu
+      - main # Workflow akan berjalan ketika ada push ke branch 'main'
   pull_request:
     branches:
-      - main # Ganti dengan nama cabang utama kamu
+      - main # Workflow akan berjalan ketika ada pull request ke branch 'main'
 
 jobs:
   build:
