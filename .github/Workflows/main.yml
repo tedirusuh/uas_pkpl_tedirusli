@@ -1,49 +1,78 @@
-# Nama workflow
+# Nama workflow ini. Akan muncul di tab 'Actions' di GitHub.
+# Pastikan nama ini unik dan deskriptif.
 name: CI/CD Pipeline for PKPL Final Exam
 
-# Pemicu: workflow akan berjalan setiap kali ada 'push' ke branch 'main'
+# Bagian 'on' mendefinisikan kapan workflow ini akan dijalankan.
+# Di sini, workflow akan terpicu setiap kali ada 'push' ke branch 'main'.
+# Pastikan branch 'main' adalah branch utama tempat Anda bekerja.
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main" # Ganti dengan nama branch utama Anda jika bukan 'main' (misal: 'master')
+  
+  # Anda juga bisa menambahkan pemicu lain, misalnya:
+  # pull_request:
+  #   branches: [ "main" ] # Workflow akan berjalan saat ada Pull Request ke branch 'main'
+  # workflow_dispatch: # Memungkinkan Anda menjalankan workflow ini secara manual dari UI GitHub Actions
 
-# Daftar pekerjaan (jobs) yang akan dijalankan
+# Bagian 'jobs' mendefinisikan satu atau lebih pekerjaan yang akan dijalankan.
+# Setiap pekerjaan berjalan secara independen secara default, atau bisa diatur dependensinya.
 jobs:
-  build-and-push:
-    # Menggunakan runner Ubuntu versi terbaru
+  build-and-deploy: # Nama unik untuk pekerjaan ini
+    # 'runs-on' menentukan jenis runner (server virtual) yang akan menjalankan pekerjaan ini.
+    # 'ubuntu-latest' adalah pilihan umum dan stabil.
     runs-on: ubuntu-latest
 
-    # Langkah-langkah (steps) yang akan dieksekusi
+    # 'steps' adalah daftar tugas yang akan dieksekusi secara berurutan dalam pekerjaan ini.
     steps:
-      # 1. Checkout kode dari repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 1. Checkout kode dari repository GitHub Anda.
+      # Ini adalah langkah pertama yang wajib agar workflow dapat mengakses file-file proyek Anda.
+      - name: Checkout repository code
+        uses: actions/checkout@v4 # Menggunakan action resmi untuk checkout kode
 
-      # 2. Setup Python untuk menjalankan unit test
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      # 2. Menyiapkan lingkungan Python.
+      # Ini diperlukan karena proyek Anda menggunakan Python (untuk pytest dan requirements.txt).
+      - name: Set up Python environment
+        uses: actions/setup-python@v4 # Menggunakan action resmi untuk setup Python
         with:
-          python-version: '3.9'
+          python-version: '3.9' # Menentukan versi Python yang akan digunakan
 
-      # 3. Install dependensi untuk testing
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      # 3. Menginstal dependensi Python.
+      # Workflow akan mencari file 'requirements.txt' di root repository Anda.
+      # Pastikan semua library yang dibutuhkan (termasuk 'pytest') ada di file ini.
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt # Perintah untuk menginstal dependensi
 
-      # 4. Jalankan Unit Test (sesuai syarat)
-      #    Jika test gagal, workflow akan berhenti di sini.
+      # 4. Menjalankan Unit Test.
+      # Ini adalah langkah penting dalam Continuous Integration (CI) untuk memastikan kode berfungsi.
+      # Jika ada test yang gagal, pekerjaan ini akan gagal, dan workflow akan berhenti di sini.
+      # Pastikan Anda memiliki file test (misal: test_app.py) dan 'pytest' sudah terinstal.
       - name: Run Unit Tests
-        run: pytest
+        run: pytest # Perintah untuk menjalankan pytest
 
-      # 5. Login ke Docker Hub menggunakan secrets
+      # 5. Login ke Docker Hub.
+      # Ini diperlukan untuk dapat mendorong (push) image Docker ke Docker Hub.
+      # 'secrets.DOCKERHUB_USERNAME' dan 'secrets.DOCKERHUB_TOKEN' adalah variabel rahasia GitHub.
+      # Anda HARUS mengkonfigurasi secrets ini di pengaturan repository GitHub Anda.
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3 # Menggunakan action resmi untuk login Docker
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # Mengambil username dari GitHub Secret
+          password: ${{ secrets.DOCKERHUB_TOKEN }}   # Mengambil token dari GitHub Secret
 
-      # 6. Build dan Push Docker image ke Docker Hub (sesuai syarat)
+      # 6. Membangun (Build) dan Mendorong (Push) Image Docker ke Docker Hub.
+      # 'context: .' berarti Dockerfile berada di root repository.
+      # 'push: true' berarti image akan didorong ke registry Docker Hub.
+      # 'tags:' menentukan nama dan tag image di Docker Hub.
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v5 # Menggunakan action resmi untuk build dan push Docker
         with:
-          context: .
-          push: true
+          context: . # Direktori tempat Dockerfile berada (root repository)
+          push: true # Menginstruksikan untuk mendorong image ke Docker Hub
+          # Format tag: <DOCKERHUB_USERNAME>/<NAMA_IMAGE_ANDA>:<TAG>
+          # 'latest' adalah tag umum untuk versi terbaru.
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-pkpl-repo:latest # Ganti 'uas-pkpl-repo' dengan nama image yang Anda inginkan
+          # Anda juga bisa menambahkan tag lain, misalnya berdasarkan SHA commit:
+          # tags: |
+          #   ${{ secrets.DOCKERHUB_USERNAME }}/uas-pkpl-repo:latest
+          #   ${{ secrets.DOCKERHUB_USERNAME }}/uas-pkpl-repo:${{ github.sha }}
