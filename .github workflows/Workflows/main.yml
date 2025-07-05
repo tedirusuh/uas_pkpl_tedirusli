@@ -1,0 +1,49 @@
+# Nama workflow
+name: CI/CD Pipeline for PKPL Final Exam
+
+# Pemicu: workflow akan berjalan setiap kali ada 'push' ke branch 'main'
+on:
+  push:
+    branches: [ "main" ]
+
+# Daftar pekerjaan (jobs) yang akan dijalankan
+jobs:
+  build-and-push:
+    # Menggunakan runner Ubuntu versi terbaru
+    runs-on: ubuntu-latest
+
+    # Langkah-langkah (steps) yang akan dieksekusi
+    steps:
+      # 1. Checkout kode dari repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Python untuk menjalankan unit test
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. Install dependensi untuk testing
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 4. Jalankan Unit Test (sesuai syarat)
+      #    Jika test gagal, workflow akan berhenti di sini.
+      - name: Run Unit Tests
+        run: pytest
+
+      # 5. Login ke Docker Hub menggunakan secrets
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 6. Build dan Push Docker image ke Docker Hub (sesuai syarat)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-pkpl-repo:latest # Ganti 'uas-pkpl-repo' dengan nama image yang Anda inginkan
